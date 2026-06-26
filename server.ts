@@ -90,6 +90,12 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+// Google Search Console verification
+app.get("/googled799012346ecf62f.html", (req, res) => {
+  res.setHeader("Content-Type", "text/html");
+  res.send("google-site-verification: googled799012346ecf62f.html");
+});
+
 // 2. Sofa Image Upload endpoint
 app.post("/api/upload", (req, res, next) => {
   logDebug("Hit /api/upload endpoint");
