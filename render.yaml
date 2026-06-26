@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: easy-zen
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+        placeholder: "Enter your Gemini API Key here"
+      - key: NODE_ENV
+        value: production

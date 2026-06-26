@@ -1,0 +1,6 @@
+{
+  "name": "Easy Zen",
+  "description": "Premium AI Living Room Background Generator for Sofas. Generate 50 realistic catalog interior settings for any sofa design.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
