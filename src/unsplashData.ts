@@ -1,4 +1,5 @@
 export function getUnsplashUrlForPrompt(id: number, filename?: string): string {
+  // Curated premium empty living rooms, guest rooms, and modern salon lounges
   const emptyRooms = [
     "photo-1600607687939-ce8a6c25118c", // Modern Empty Living Room, large windows, wooden floor
     "photo-1600585154340-be6161a56a0c", // Scandinavian clean minimalist floor & wall area
@@ -54,13 +55,53 @@ export function getUnsplashUrlForPrompt(id: number, filename?: string): string {
     "photo-1513519245088-0e12902e5a38", // Modern luxury empty loft
     "photo-1582268611958-ebfd161ef9cf", // Cozy high-ceiling living space
     "photo-1507089947368-19c1da9775ae", // Minimalist premium empty apartment
-    "photo-1600210491892-6f205c01acb3", // Sunny minimalist apartment empty room
-    "photo-1600585154526-990dced4db0d"  // Dark modern luxury lounge space
+    "photo-1524758631624-e2822e304c36", // Japandi clean lounge area
+    "photo-1505693416388-ac5ce068fe85", // Cozy bedroom/guest room suite
+    "photo-1512915922686-57c11dde9b6b", // Stunning empty modern room
+    "photo-1519710164239-da123dc03ef4", // Beautiful warm wood living corner
+    "photo-1522708323590-d24dbb6b0267", // Cozy clean living area
+    "photo-1538688525198-9b88f6f53126", // Minimalist bright guest lounge
+    "photo-1554995207-c18c203602cb", // Spacious sunlit living space
+    "photo-1503174971373-b1f69850bdf4", // Classic empty clean parlor
+    "photo-1560185007-c5ca9d2c014d", // Modern empty room with windows
+    "photo-1560185893-a55cbc2c78a9", // Cozy warm sunroom corner
+    "photo-1560448204-61dc367500bb", // Bright spacious modern guest suite
+    "photo-1565538810844-1e119df18843", // Sophisticated empty warm room
+    "photo-1572120360610-d971b9d7767c", // Premium empty lounge room
+    "photo-1585128792020-803d29415281", // Sleek minimalist modern living room
+    "photo-1588880331179-bc9b93a8c5d8", // Beautiful window daylight interior
+    "photo-1591088398332-8a7791972843", // Cozy cottage guest room
+    "photo-1593696139371-1a2c2b64ac24", // Sunny Scandinavian guest room
+    "photo-1594075196603-90d26c59b20b", // Contemporary empty room
+    "photo-1595526114035-0d45ed16cfbf", // Minimalist gray wall guest area
+    "photo-1544207613-0f792e65d9fc", // Neat minimalist room floor
+    "photo-1522441815192-d9f04eb0615c", // Spacious modern empty room
+    "photo-1505693416388-ac5ce068fe85", // Gorgeous hotel room lounge
+    "photo-1512915922686-57c11dde9b6b", // Stunning modern empty penthouse hall
+    "photo-1519710164239-da123dc03ef4", // Classic rich wood cozy living corner
+    "photo-1522708323590-d24dbb6b0267", // Cozy sunlit living area
+    "photo-1538688525198-9b88f6f53126", // Scandinavian guest lounge corner
+    "photo-1554995207-c18c203602cb", // Sunlit designer empty parlor room
+    "photo-1503174971373-b1f69850bdf4", // Clean high contrast classic salon
+    "photo-1560185127-6a2806647f81", // Spacious designer loft corner
+    "photo-1560185007-c5ca9d2c014d", // Spacious empty room corner
+    "photo-1560448204-61dc367500bb", // Gorgeous hotel suite room
+    "photo-1560185893-a55cbc2c78a9", // Warm wood empty salon
+    "photo-1565538810844-1e119df18843", // Warm light parlor room
+    "photo-1572120360610-d971b9d7767c", // Premium empty luxury apartment
+    "photo-1585128792020-803d29415281", // Contemporary minimalist flat empty wall
+    "photo-1588880331179-bc9b93a8c5d8", // Sunny white parlor floor
+    "photo-1591088398332-8a7791972843", // Cozy cottage room
+    "photo-1593696139371-1a2c2b64ac24", // Sunny warm scandinavian parlor
+    "photo-1594075196603-90d26c59b20b", // Modern empty design lounge
+    "photo-1595526114035-0d45ed16cfbf", // Cozy clean guest suite wall
+    "photo-1507089947368-19c1da9775ae", // Minimalist premium guest parlor
+    "photo-1618219908412-a29a1bb7b86e", // White wood panel floor empty space
+    "photo-1600585154526-990dced4db0d"  // Dark slate wall salon
   ];
 
-  const list = [...emptyRooms];
-
-  // If a filename is provided, stably shuffle the list based on a hash of the filename
+  // If a filename is provided, stably shuffle the list based on a hash of the filename to provide personalized variety
+  const roomList = [...emptyRooms];
   if (filename) {
     let hash = 0;
     for (let i = 0; i < filename.length; i++) {
@@ -70,12 +111,12 @@ export function getUnsplashUrlForPrompt(id: number, filename?: string): string {
     hash = Math.abs(hash);
 
     // Seeded Fisher-Yates shuffle
-    for (let i = list.length - 1; i > 0; i--) {
+    for (let i = roomList.length - 1; i > 0; i--) {
       hash = (hash * 1664525 + 1013904223) % 4294967296;
       const j = hash % (i + 1);
-      const temp = list[i];
-      list[i] = list[j];
-      list[j] = temp;
+      const temp = roomList[i];
+      roomList[i] = roomList[j];
+      roomList[j] = temp;
     }
   }
 
@@ -86,16 +127,36 @@ export function getUnsplashUrlForPrompt(id: number, filename?: string): string {
   const rIdx = Math.floor(zeroBasedId / 100) % 10;
   const sIdx = Math.floor(zeroBasedId / 1000) % 10;
 
-  // Select base room index using reconstructed indices for stable non-repeating pairs
-  const baseRoomIndex = (rIdx * 7 + sIdx * 3 + pIdx) % list.length;
-  const idStr = list[baseRoomIndex];
+  // Compute a coprime-multiplier-based baseRoomIndex.
+  // This spreads the chosen base room images perfectly so consecutive prompts have absolutely different backgrounds.
+  const baseRoomIndex = (zeroBasedId * 17 + rIdx * 7 + pIdx * 3) % roomList.length;
+  const idStr = roomList[baseRoomIndex];
 
   // Apply subtle visual adjustments based on styling & lighting characteristics to create 1000+ distinct rooms
   let imgixParams = "";
 
-  // 1. Flip horizontally every other index for spatial variance
+  // 1. Horizontally flip every other index for spatial variance (sofa fits either side!)
   if ((rIdx + pIdx + lIdx) % 2 === 1) {
     imgixParams += "&flip=h";
+  }
+
+  // 2. Camera Viewport Shifting / Zoom cropping variations
+  // High-res Unsplash interior photos support distinct rectangular crops to look like entirely different rooms!
+  const cropPattern = zeroBasedId % 4;
+  if (cropPattern === 1) {
+    // Zoom in on the left wall/corner
+    imgixParams += "&rect=0,100,3400,2800";
+  } else if (cropPattern === 2) {
+    // Zoom in on the right wall/corner
+    imgixParams += "&rect=600,0,3400,2800";
+  } else if (cropPattern === 3) {
+    // Zoomed in cozy intimate parlor crop
+    imgixParams += "&rect=300,150,3200,2500";
+  }
+
+  // 3. Subtle portrait depth-of-field blur for 1 in 6 rooms to make the sofa pop elegantly
+  if (zeroBasedId % 6 === 2) {
+    imgixParams += "&blur=4";
   }
 
   let bri = 0;      // brightness (-100 to 100)

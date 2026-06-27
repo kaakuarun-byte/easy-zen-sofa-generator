@@ -434,6 +434,7 @@ app.use((err: any, req: any, res: any, next: any) => {
 
 // Setup dev server or production hosting
 async function startServer() {
+
   if (process.env.NODE_ENV !== "production") {
     console.log("Integrating Vite Dev Server middleware...");
     const vite = await createViteServer({
