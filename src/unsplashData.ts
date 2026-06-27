@@ -20,5 +20,5 @@ export function getUnsplashUrlForPrompt(id: number): string {
   // Map 1-50 IDs to the emptyRooms list stably using modulo
   const index = (id - 1) % emptyRooms.length;
   const idStr = emptyRooms[index];
-  return `https://images.unsplash.com/` + idStr + `?auto=format&fit=crop&w=1000&q=80`;
+  return `https://images.unsplash.com/` + idStr + `?auto=format&fit=crop&w=1090&h=976&q=85`;
 }
