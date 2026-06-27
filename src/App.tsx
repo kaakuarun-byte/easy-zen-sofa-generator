@@ -193,6 +193,7 @@ export default function App() {
   const [prompts, setPrompts] = useState<PromptState[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [concurrency, setConcurrency] = useState(2); // safe default for API keys
+  const [activePreviewPromptId, setActivePreviewPromptId] = useState<number>(1);
 
   // Interactive controls
   const [searchQuery, setSearchQuery] = useState("");
@@ -406,11 +407,12 @@ export default function App() {
 
       setSofaImage(data);
       
-      // Initialize the 50 prompts
+      // Initialize the 50 prompts with random seeds
       const initialStates: PromptState[] = SOFA_PROMPTS.map((p) => ({
         ...p,
         status: "idle",
         retryCount: 0,
+        seed: Math.floor(Math.random() * 1000000),
       }));
       setPrompts(initialStates);
 
@@ -466,6 +468,7 @@ export default function App() {
           selectedStyle: globalStyleRef.current,
           selectedMood: globalMoodRef.current,
           isSandbox: isSandboxRef.current,
+          seed: targetPrompt.seed || 0,
         }),
       });
 
@@ -590,9 +593,9 @@ export default function App() {
   const handleGenerateSingle = async (promptId: number) => {
     if (!sofaImage) return;
 
-    // Set state of this single item to pending
+    // Set state of this single item to pending and assign a fresh random seed for dynamic backgrounds
     setPrompts((prev) =>
-      prev.map((p) => (p.id === promptId ? { ...p, status: "pending", error: undefined } : p))
+      prev.map((p) => (p.id === promptId ? { ...p, status: "pending", seed: Math.floor(Math.random() * 1000000), error: undefined } : p))
     );
 
     // If queue is not running globally, spawn a single transient worker to handle just this prompt!
@@ -942,6 +945,10 @@ export default function App() {
                     </button>
                   </div>
 
+                  <p className="text-2xs text-[#706e68] italic mb-3">
+                    Click any room card in the catalog below to load its dynamic background into this positioning editor!
+                  </p>
+
                   {/* Dynamic Room Placement Preview Box */}
                   <div 
                     className="relative bg-[#faf9f6] rounded border border-[#efede8] overflow-hidden flex items-center justify-center group shadow-inner w-full"
@@ -949,7 +956,11 @@ export default function App() {
                   >
                     {/* Living Room Background */}
                     <img
-                      src={getUnsplashUrlForPrompt(1, sofaImage.filename)}
+                      src={getUnsplashUrlForPrompt(
+                        activePreviewPromptId,
+                        sofaImage.filename,
+                        prompts.find((p) => p.id === activePreviewPromptId)?.seed
+                      )}
                       alt="Sample background room"
                       referrerPolicy="no-referrer"
                       crossOrigin="anonymous"
@@ -978,7 +989,7 @@ export default function App() {
 
                     {/* Real-time Indicator tag */}
                     <span className="absolute top-2 left-2 bg-[#1a1a1a]/90 backdrop-blur-sm text-[9px] uppercase tracking-wider font-mono font-bold text-[#fbfbf9] px-2 py-0.5 rounded shadow-sm">
-                      Interactive Sandbox
+                      Interactive Sandbox: Room #{String(activePreviewPromptId).padStart(2, "0")}
                     </span>
                     
                     <div className="absolute bottom-2 left-2 bg-black/75 backdrop-blur-sm text-[9px] font-mono text-white px-2 py-0.5 rounded-sm">
@@ -1305,6 +1316,30 @@ export default function App() {
                       </button>
                     )}
 
+                    {/* Shuffle backgrounds dynamically on the fly */}
+                    <button
+                      onClick={() => {
+                        setPrompts((prev) =>
+                          prev.map((p) => {
+                            const newSeed = Math.floor(Math.random() * 1000000);
+                            return {
+                              ...p,
+                              seed: newSeed,
+                              // If sandbox, re-run immediately to update their background preview URLs!
+                              resultUrl: p.status === "completed" && p.isSandbox
+                                ? getUnsplashUrlForPrompt(p.id, sofaImage?.filename, newSeed)
+                                : p.resultUrl
+                            };
+                          })
+                        );
+                      }}
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium rounded-md tracking-wide transition-all duration-200 shadow-sm"
+                      title="Instantly swap the background image of every card in the catalog!"
+                    >
+                      <RefreshCw className="h-4 w-4 text-slate-500" />
+                      Shuffle Room Backgrounds
+                    </button>
+
                     {/* Master ZIP Download button */}
                     <button
                       id="download-all-btn"
@@ -1568,7 +1603,8 @@ export default function App() {
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ duration: 0.3 }}
-                      className="bg-white border border-[#e9e6df] rounded-xl overflow-hidden shadow-xs hover:shadow-md transition-shadow group flex flex-col justify-between"
+                      onClick={() => setActivePreviewPromptId(prompt.id)}
+                      className={`bg-white border ${prompt.id === activePreviewPromptId ? "border-[#b08d57] ring-1 ring-[#b08d57]" : "border-[#e9e6df]"} rounded-xl overflow-hidden shadow-xs hover:shadow-md transition-shadow group flex flex-col justify-between cursor-pointer`}
                     >
                       {/* Card Visual Container */}
                       <div 
@@ -1615,14 +1651,14 @@ export default function App() {
                             {/* Hover overlay controls */}
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
                               <button
-                                onClick={() => setLightboxPrompt(prompt)}
+                                onClick={(e) => { e.stopPropagation(); setLightboxPrompt(prompt); }}
                                 className="h-9 w-9 bg-white/95 text-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white rounded-full flex items-center justify-center transition-all shadow-md"
                                 title="Zoom Catalog Photo"
                               >
                                 <Maximize2 className="h-4 w-4" />
                               </button>
                               <button
-                                onClick={() => handleDownloadSingle(prompt)}
+                                onClick={(e) => { e.stopPropagation(); handleDownloadSingle(prompt); }}
                                 className="h-9 w-9 bg-white/95 text-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white rounded-full flex items-center justify-center transition-all shadow-md"
                                 title="Download Background File"
                               >
@@ -1685,6 +1721,14 @@ export default function App() {
                         <div className="absolute top-2.5 right-2.5 bg-[#1a1a1a]/85 backdrop-blur-xs text-3xs font-mono text-[#eae6dc] font-bold h-5 w-8 flex items-center justify-center rounded-sm">
                           #{String(prompt.id).padStart(2, "0")}
                         </div>
+
+                        {/* Active Indicator Badge */}
+                        {prompt.id === activePreviewPromptId && (
+                          <div className="absolute bottom-2.5 right-2.5 bg-[#b08d57] text-3xs font-mono font-bold text-white px-1.5 py-0.5 rounded-sm shadow-xs flex items-center gap-1">
+                            <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse"></span>
+                            ACTIVE EDIT
+                          </div>
+                        )}
                       </div>
 
                       {/* Card Content Footer */}
@@ -1745,14 +1789,14 @@ export default function App() {
                             {prompt.status === "completed" && prompt.resultUrl ? (
                               <div className="flex items-center gap-2">
                                 <button
-                                  onClick={() => setLightboxPrompt(prompt)}
+                                  onClick={(e) => { e.stopPropagation(); setLightboxPrompt(prompt); }}
                                   className="text-3xs flex items-center gap-1 border border-[#e2dfd9] hover:border-[#b08d57] text-[#555] hover:text-[#b08d57] px-2.5 py-1 rounded transition-all font-medium uppercase tracking-wider"
                                 >
                                   <Eye className="h-3 w-3" />
                                   View
                                 </button>
                                 <button
-                                  onClick={() => handleGenerateSingle(prompt.id)}
+                                  onClick={(e) => { e.stopPropagation(); handleGenerateSingle(prompt.id); }}
                                   className="text-3xs flex items-center gap-1 border border-[#e2dfd9] hover:border-[#b08d57] text-[#555] hover:text-[#b08d57] px-2 py-1 rounded transition-all font-medium"
                                   title="Re-run Prompt"
                                 >
@@ -1769,7 +1813,7 @@ export default function App() {
                               </button>
                             ) : (
                               <button
-                                onClick={() => handleGenerateSingle(prompt.id)}
+                                onClick={(e) => { e.stopPropagation(); handleGenerateSingle(prompt.id); }}
                                 className="text-3xs flex items-center gap-1.5 bg-[#b08d57] hover:bg-[#947443] text-white px-3 py-1.5 rounded transition-all font-semibold uppercase tracking-wider shadow-sm"
                               >
                                 <Sparkles className="h-3 w-3" />

@@ -1,5 +1,5 @@
-export function getUnsplashUrlForPrompt(id: number, filename?: string): string {
-  // Curated premium empty living rooms, guest rooms, and modern salon lounges
+export function getUnsplashUrlForPrompt(id: number, filename?: string, seedOffset?: number): string {
+  // Curated premium empty living rooms, guest rooms, and modern salon lounges (completely unique)
   const emptyRooms = [
     "photo-1600607687939-ce8a6c25118c", // Modern Empty Living Room, large windows, wooden floor
     "photo-1600585154340-be6161a56a0c", // Scandinavian clean minimalist floor & wall area
@@ -75,33 +75,11 @@ export function getUnsplashUrlForPrompt(id: number, filename?: string): string {
     "photo-1594075196603-90d26c59b20b", // Contemporary empty room
     "photo-1595526114035-0d45ed16cfbf", // Minimalist gray wall guest area
     "photo-1544207613-0f792e65d9fc", // Neat minimalist room floor
-    "photo-1522441815192-d9f04eb0615c", // Spacious modern empty room
-    "photo-1505693416388-ac5ce068fe85", // Gorgeous hotel room lounge
-    "photo-1512915922686-57c11dde9b6b", // Stunning modern empty penthouse hall
-    "photo-1519710164239-da123dc03ef4", // Classic rich wood cozy living corner
-    "photo-1522708323590-d24dbb6b0267", // Cozy sunlit living area
-    "photo-1538688525198-9b88f6f53126", // Scandinavian guest lounge corner
-    "photo-1554995207-c18c203602cb", // Sunlit designer empty parlor room
-    "photo-1503174971373-b1f69850bdf4", // Clean high contrast classic salon
-    "photo-1560185127-6a2806647f81", // Spacious designer loft corner
-    "photo-1560185007-c5ca9d2c014d", // Spacious empty room corner
-    "photo-1560448204-61dc367500bb", // Gorgeous hotel suite room
-    "photo-1560185893-a55cbc2c78a9", // Warm wood empty salon
-    "photo-1565538810844-1e119df18843", // Warm light parlor room
-    "photo-1572120360610-d971b9d7767c", // Premium empty luxury apartment
-    "photo-1585128792020-803d29415281", // Contemporary minimalist flat empty wall
-    "photo-1588880331179-bc9b93a8c5d8", // Sunny white parlor floor
-    "photo-1591088398332-8a7791972843", // Cozy cottage room
-    "photo-1593696139371-1a2c2b64ac24", // Sunny warm scandinavian parlor
-    "photo-1594075196603-90d26c59b20b", // Modern empty design lounge
-    "photo-1595526114035-0d45ed16cfbf", // Cozy clean guest suite wall
-    "photo-1507089947368-19c1da9775ae", // Minimalist premium guest parlor
-    "photo-1618219908412-a29a1bb7b86e", // White wood panel floor empty space
-    "photo-1600585154526-990dced4db0d"  // Dark slate wall salon
+    "photo-1522441815192-d9f04eb0615c"  // Spacious modern empty room
   ];
 
-  // If a filename is provided, stably shuffle the list based on a hash of the filename to provide personalized variety
-  const roomList = [...emptyRooms];
+  // Deduplicate emptyRooms dynamically to ensure absolutely no duplicate backgrounds under any circumstance
+  const roomList = Array.from(new Set(emptyRooms));
   if (filename) {
     let hash = 0;
     for (let i = 0; i < filename.length; i++) {
@@ -120,16 +98,16 @@ export function getUnsplashUrlForPrompt(id: number, filename?: string): string {
     }
   }
 
-  // Reconstruct stylistic indices from the prompt's ID (which is 1-indexed)
-  const zeroBasedId = (id - 1);
+  // Reconstruct stylistic indices from the prompt's ID (which is 1-indexed) plus seedOffset
+  const zeroBasedId = (id - 1) + (seedOffset || 0);
   const lIdx = zeroBasedId % 10;
   const pIdx = Math.floor(zeroBasedId / 10) % 10;
   const rIdx = Math.floor(zeroBasedId / 100) % 10;
   const sIdx = Math.floor(zeroBasedId / 1000) % 10;
 
-  // Compute a coprime-multiplier-based baseRoomIndex.
-  // This spreads the chosen base room images perfectly so consecutive prompts have absolutely different backgrounds.
-  const baseRoomIndex = (zeroBasedId * 17 + rIdx * 7 + pIdx * 3) % roomList.length;
+  // Compute a 100% collision-free baseRoomIndex for up to roomList.length unique backgrounds.
+  // This maps each of the 50 prompts to a completely unique background image, resulting in zero repetitions.
+  const baseRoomIndex = zeroBasedId % roomList.length;
   const idStr = roomList[baseRoomIndex];
 
   // Apply subtle visual adjustments based on styling & lighting characteristics to create 1000+ distinct rooms

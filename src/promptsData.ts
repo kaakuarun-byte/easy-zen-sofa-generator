@@ -74,7 +74,7 @@ const categoriesMap: Record<string, "Modern" | "Minimalist" | "Cozy" | "Scenic" 
 
 export const SOFA_PROMPTS: SofaPrompt[] = [];
 
-// Seeded generator to build exactly 1020 unique combinations
+// Seeded generator to build exactly 50 unique combinations
 let currentId = 1;
 
 for (let sIdx = 0; sIdx < styles.length; sIdx++) {
@@ -90,7 +90,7 @@ for (let sIdx = 0; sIdx < styles.length; sIdx++) {
       for (let lIdx = 0; lIdx < lightings.length; lIdx++) {
         const lighting = lightings[lIdx];
 
-        if (currentId <= 1020) {
+        if (currentId <= 50) {
           const title = `${style} ${palette.split(" & ")[0]} ${room}`;
           const promptText = `${SOFA_INSTRUCTION_PREFIX} Create a highly premium and elegant empty ${room.toLowerCase()} in a ${style.toLowerCase()} design style. The room features a sophisticated color scheme of ${palette.toLowerCase()}. It is illuminated by ${lighting.toLowerCase()}, casting realistic soft shadows and warm highlights across the scene. The space boasts pristine flooring, architectural details, and is perfectly clean with no people, pets, or clutter. Render with ultra photorealistic commercial furniture photography quality, HDR, 8K resolution, and magazine-ready composition.`;
 

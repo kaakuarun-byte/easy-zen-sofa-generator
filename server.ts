@@ -164,7 +164,7 @@ function formatGeminiError(err: any): string {
 // 3. Background Generation endpoint
 app.post("/api/generate", async (req, res) => {
   try {
-    const { filename, promptId, selectedStyle, selectedMood, isSandbox } = req.body;
+    const { filename, promptId, selectedStyle, selectedMood, isSandbox, seed } = req.body;
 
     if (!filename) {
       return res.status(400).json({ error: "Missing filename." });
@@ -182,7 +182,7 @@ app.post("/api/generate", async (req, res) => {
     
     // Check if sandbox is explicitly enabled, or if the API key is completely missing
     if (isSandbox || !apiKey) {
-      const sandboxUrl = getUnsplashUrlForPrompt(Number(promptId), filename);
+      const sandboxUrl = getUnsplashUrlForPrompt(Number(promptId), filename, seed ? Number(seed) : undefined);
       console.log(`[Sandbox Mode] Generating simulation for prompt #${promptId}: "${promptObj.title}"`);
       return res.json({
         promptId: Number(promptId),
@@ -319,7 +319,7 @@ app.post("/api/generate", async (req, res) => {
 
     if (isQuotaOrLimitError) {
       console.log(`[Server Fallback] Gemini call failed with quota/limit error. Falling back to Sandbox Mode for prompt #${req.body.promptId}`);
-      const sandboxUrl = getUnsplashUrlForPrompt(Number(req.body.promptId), req.body.filename);
+      const sandboxUrl = getUnsplashUrlForPrompt(Number(req.body.promptId), req.body.filename, req.body.seed ? Number(req.body.seed) : undefined);
       return res.json({
         promptId: Number(req.body.promptId),
         url: sandboxUrl,
