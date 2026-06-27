@@ -182,7 +182,7 @@ app.post("/api/generate", async (req, res) => {
     
     // Check if sandbox is explicitly enabled, or if the API key is completely missing
     if (isSandbox || !apiKey) {
-      const sandboxUrl = getUnsplashUrlForPrompt(Number(promptId));
+      const sandboxUrl = getUnsplashUrlForPrompt(Number(promptId), filename);
       console.log(`[Sandbox Mode] Generating simulation for prompt #${promptId}: "${promptObj.title}"`);
       return res.json({
         promptId: Number(promptId),
@@ -319,7 +319,7 @@ app.post("/api/generate", async (req, res) => {
 
     if (isQuotaOrLimitError) {
       console.log(`[Server Fallback] Gemini call failed with quota/limit error. Falling back to Sandbox Mode for prompt #${req.body.promptId}`);
-      const sandboxUrl = getUnsplashUrlForPrompt(Number(req.body.promptId));
+      const sandboxUrl = getUnsplashUrlForPrompt(Number(req.body.promptId), req.body.filename);
       return res.json({
         promptId: Number(req.body.promptId),
         url: sandboxUrl,

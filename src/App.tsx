@@ -949,7 +949,7 @@ export default function App() {
                   >
                     {/* Living Room Background */}
                     <img
-                      src={getUnsplashUrlForPrompt(1)}
+                      src={getUnsplashUrlForPrompt(1, sofaImage.filename)}
                       alt="Sample background room"
                       referrerPolicy="no-referrer"
                       crossOrigin="anonymous"
