@@ -10,6 +10,54 @@ import { getUnsplashUrlForPrompt } from "./unsplashData";
 import { PromptState, UploadResponse, GenerationStatus } from "./types";
 import JSZip from "jszip";
 
+// Helper to resize any Image Blob to target dimensions (1090x976)
+const resizeImageBlob = (imageBlob: Blob, targetW: number, targetH: number): Promise<Blob> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    const url = URL.createObjectURL(imageBlob);
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = targetW;
+      canvas.height = targetH;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        URL.revokeObjectURL(url);
+        reject(new Error("Canvas context failed"));
+        return;
+      }
+      
+      // Draw image to fill/cover the target area
+      const imgAspect = img.naturalWidth / img.naturalHeight;
+      const targetAspect = targetW / targetH;
+      let drawW = targetW;
+      let drawH = targetH;
+      let offsetX = 0;
+      let offsetY = 0;
+
+      if (imgAspect > targetAspect) {
+        drawW = targetH * imgAspect;
+        offsetX = (targetW - drawW) / 2;
+      } else {
+        drawH = targetW / imgAspect;
+        offsetY = (targetH - drawH) / 2;
+      }
+
+      ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
+      canvas.toBlob((blob) => {
+        URL.revokeObjectURL(url);
+        if (blob) resolve(blob);
+        else reject(new Error("Blob generation failed"));
+      }, "image/png");
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Failed to load image for resizing"));
+    };
+    img.src = url;
+  });
+};
+
 // High-fidelity image merger to produce pixel-perfect combined lifestyle photos
 const mergeSofaWithBackground = (
   backgroundUrl: string,
@@ -27,16 +75,32 @@ const mergeSofaWithBackground = (
       sofaImg.crossOrigin = "anonymous";
       sofaImg.onload = () => {
         const canvas = document.createElement("canvas");
-        canvas.width = bgImg.naturalWidth;
-        canvas.height = bgImg.naturalHeight;
+        canvas.width = 1090;
+        canvas.height = 976;
         const ctx = canvas.getContext("2d");
         if (!ctx) {
           reject(new Error("Failed to get canvas 2D context"));
           return;
         }
 
-        // 1. Render Background
-        ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+        // 1. Render Background with Cover Fitting (No stretching)
+        const bgAspect = bgImg.naturalWidth / bgImg.naturalHeight;
+        const targetAspect = 1090 / 976;
+        let drawW = 1090;
+        let drawH = 976;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        if (bgAspect > targetAspect) {
+          // Background is wider than target aspect ratio
+          drawW = 976 * bgAspect;
+          offsetX = (1090 - drawW) / 2;
+        } else {
+          // Background is taller than target aspect ratio
+          drawH = 1090 / bgAspect;
+          offsetY = (976 - drawH) / 2;
+        }
+        ctx.drawImage(bgImg, offsetX, offsetY, drawW, drawH);
 
         // 2. Compute proportions & spacing
         const padX = canvas.width * 0.04; 
@@ -569,7 +633,9 @@ export default function App() {
             );
           } else {
             const res = await fetch(p.resultUrl!);
-            blob = await res.blob();
+            const baseBlob = await res.blob();
+            // Ensure even non-sandbox downloaded images are exactly 1090x976
+            blob = await resizeImageBlob(baseBlob, 1090, 976);
           }
           
           const padId = String(p.id).padStart(2, "0");
@@ -620,7 +686,9 @@ export default function App() {
         );
       } else {
         const res = await fetch(prompt.resultUrl);
-        blob = await res.blob();
+        const baseBlob = await res.blob();
+        // Ensure even non-sandbox downloaded images are exactly 1090x976
+        blob = await resizeImageBlob(baseBlob, 1090, 976);
       }
       
       const link = document.createElement("a");
@@ -875,7 +943,10 @@ export default function App() {
                   </div>
 
                   {/* Dynamic Room Placement Preview Box */}
-                  <div className="relative bg-[#faf9f6] rounded border border-[#efede8] overflow-hidden aspect-[4/3] flex items-center justify-center group shadow-inner">
+                  <div 
+                    className="relative bg-[#faf9f6] rounded border border-[#efede8] overflow-hidden flex items-center justify-center group shadow-inner w-full"
+                    style={{ aspectRatio: "1090/976" }}
+                  >
                     {/* Living Room Background */}
                     <img
                       src={getUnsplashUrlForPrompt(1)}
@@ -900,7 +971,7 @@ export default function App() {
                     </div>
 
                     {/* Centered Guide-lines overlay when dragging */}
-                    <div className="absolute inset-0 border border-amber-500/10 pointer-events-none flex items-center justify-center">
+                    <div className="absolute inset-0 pointer-events-none border border-amber-500/10 pointer-events-none flex items-center justify-center">
                       <div className="h-full w-[1px] border-r border-dashed border-amber-500/20 absolute"></div>
                       <div className="w-full h-[1px] border-b border-dashed border-amber-500/20 absolute"></div>
                     </div>
@@ -910,11 +981,9 @@ export default function App() {
                       Interactive Sandbox
                     </span>
                     
-                    {imgDimensions && (
-                      <div className="absolute bottom-2 left-2 bg-black/75 backdrop-blur-sm text-[9px] font-mono text-white px-2 py-0.5 rounded-sm">
-                        {imgDimensions.w} x {imgDimensions.h} px
-                      </div>
-                    )}
+                    <div className="absolute bottom-2 left-2 bg-black/75 backdrop-blur-sm text-[9px] font-mono text-white px-2 py-0.5 rounded-sm">
+                      Output Frame: 1090 x 976 px
+                    </div>
                   </div>
 
                   {/* Sliders Container */}
@@ -1502,7 +1571,10 @@ export default function App() {
                       className="bg-white border border-[#e9e6df] rounded-xl overflow-hidden shadow-xs hover:shadow-md transition-shadow group flex flex-col justify-between"
                     >
                       {/* Card Visual Container */}
-                      <div className="relative aspect-[4/3] bg-[#f4f1ea] overflow-hidden flex items-center justify-center border-b border-[#f1efe9]">
+                      <div 
+                        className="relative bg-[#f4f1ea] overflow-hidden flex items-center justify-center border-b border-[#f1efe9] w-full"
+                        style={{ aspectRatio: "1090/976" }}
+                      >
                         
                         {prompt.status === "completed" && prompt.resultUrl ? (
                           <>
@@ -1740,7 +1812,10 @@ export default function App() {
                   transition={{ duration: 0.15 }}
                   className="absolute inset-0 flex items-center justify-center p-4"
                 >
-                  <div className="relative max-h-full max-w-full aspect-[4/3] flex items-center justify-center overflow-hidden">
+                  <div 
+                    className="relative max-h-full max-w-full flex items-center justify-center overflow-hidden"
+                    style={{ aspectRatio: "1090/976" }}
+                  >
                     <img
                       src={isComparing ? sofaImage?.url : lightboxPrompt.resultUrl}
                       alt={isComparing ? "Original Sofa" : "Generated Catalog Scene"}
